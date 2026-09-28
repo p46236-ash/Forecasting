@@ -1,5 +1,10 @@
-streamlit
 pandas
 numpy
-scikit-learn
 matplotlib
+seaborn
+statsmodels
+plotly
+pmdarima
+scikit-learn
+streamlit
+joblib
