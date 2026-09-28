@@ -1,63 +1,47 @@
 import streamlit as st
-import pandas as pd
 import joblib
-import matplotlib.pyplot as plt
+import pandas as pd
 
-st.set_page_config(layout='wide')
-st.title('Demand Forecasting with ARIMA')
-
-# Load the dataset
-@st.cache_data
-def load_data():
-    df = pd.read_csv('demand_data.csv') # Assuming demand_data.csv is in the same directory
-    df['Month'] = pd.to_datetime(df['Month'], format='%b-%Y')
-    df.rename(columns={'Month': 'Month-Year'}, inplace=True)
-    df.set_index('Month-Year', inplace=True)
-    return df
-
-df = load_data()
-
-# Load the trained ARIMA model
+# Load the ARIMA model
 @st.cache_resource
-def load_model():
-    model = joblib.load('arima_model.sav') # Updated to .sav
+def load_model(model_path):
+    model = joblib.load(model_path)
     return model
 
-model = load_model()
+model = load_model('arima_model.sav')
 
-st.subheader('Original Demand Data')
-st.write(df)
+st.title('ARIMA Demand Forecasting App')
+st.write('This app forecasts future demand using a pre-trained ARIMA model.')
 
-st.subheader('Forecast Future Demand')
+# User input for number of future periods
+periods = st.slider(
+    'Select the number of future months to forecast:',
+    min_value=1,
+    max_value=24,
+    value=6
+)
 
-# User input for number of future months to forecast
-periods = st.slider('Select number of months to forecast:', 1, 24, 6)
+if st.button('Generate Forecast'):
+    # Make predictions
+    forecast, conf_int = model.predict(n_periods=periods, return_conf_int=True)
 
-# Make future predictions
-future_forecast = model.predict(n_periods=periods)
+    # Create a date index for the forecast
+    # Assuming the last date in your training data was 2024-07-01 based on your notebook state
+    # You might need to adjust the start date if your training data ends differently
+    last_date = pd.to_datetime('2024-07-01') # Based on the end of your train_data
+    forecast_index = pd.date_range(start=last_date + pd.DateOffset(months=1), periods=periods, freq='MS')
 
-# Create a DataFrame for the forecast
-# Determine the last date in the original data
-last_date = df.index.max()
-# Generate future dates based on the frequency of the original data (monthly in this case)
-future_dates = pd.date_range(start=last_date, periods=periods + 1, freq='MS')[1:] # +1 and [1:] to exclude the last date of original data
+    forecast_df = pd.DataFrame({
+        'Date': forecast_index,
+        'Forecasted Demand (000L)': forecast,
+        'Lower_Bound': conf_int[:, 0],
+        'Upper_Bound': conf_int[:, 1]
+    })
+    forecast_df.set_index('Date', inplace=True)
 
-forecast_df = pd.DataFrame({'Demand_000L': future_forecast}, index=future_dates)
+    st.subheader(f'Forecast for the next {periods} months:')
+    st.dataframe(forecast_df)
 
-st.write(f'Forecasting for the next {periods} months:')
-st.write(forecast_df)
+    st.subheader('Forecast Visualization:')
+    st.line_chart(forecast_df[['Forecasted Demand (000L)', 'Lower_Bound', 'Upper_Bound']])
 
-st.subheader('Demand Forecast Visualization')
-
-# Combine original and forecast data for plotting
-combined_df = pd.concat([df['Demand_000L'], forecast_df['Demand_000L']])
-
-fig, ax = plt.subplots(figsize=(12, 6))
-ax.plot(df.index, df['Demand_000L'], label='Historical Demand', color='blue')
-ax.plot(forecast_df.index, forecast_df['Demand_000L'], label='Forecasted Demand', color='red', linestyle='--')
-ax.set_title('Historical and Forecasted Demand')
-ax.set_xlabel('Date')
-ax.set_ylabel('Demand (000L)')
-ax.legend()
-ax.grid(True)
-st.pyplot(fig)
