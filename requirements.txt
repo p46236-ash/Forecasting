@@ -3,7 +3,6 @@ numpy
 matplotlib
 seaborn
 statsmodels
-plotly
 pmdarima
 scikit-learn
 streamlit
