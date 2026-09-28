@@ -9,7 +9,7 @@ st.title('Demand Forecasting with ARIMA')
 # Load the dataset
 @st.cache_data
 def load_data():
-    df = pd.read_csv('/content/demand_data.csv')
+    df = pd.read_csv('demand_data.csv') # Assuming demand_data.csv is in the same directory
     df['Month'] = pd.to_datetime(df['Month'], format='%b-%Y')
     df.rename(columns={'Month': 'Month-Year'}, inplace=True)
     df.set_index('Month-Year', inplace=True)
@@ -20,7 +20,7 @@ df = load_data()
 # Load the trained ARIMA model
 @st.cache_resource
 def load_model():
-    model = joblib.load('arima_model.joblib')
+    model = joblib.load('arima_model.sav') # Updated to .sav
     return model
 
 model = load_model()
@@ -61,5 +61,3 @@ ax.set_ylabel('Demand (000L)')
 ax.legend()
 ax.grid(True)
 st.pyplot(fig)
-
-st.markdown
